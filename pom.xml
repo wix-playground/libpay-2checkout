@@ -30,5 +30,6 @@
         <module>libpay-2checkout</module>
         <module>libpay-2checkout-common</module>
         <module>libpay-2checkout-testkit</module>
+        <module>libpay-2checkout-htmltokenizer</module>
     </modules>
 </project>
