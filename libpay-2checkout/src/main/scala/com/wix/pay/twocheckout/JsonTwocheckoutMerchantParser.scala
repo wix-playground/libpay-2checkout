@@ -3,7 +3,7 @@ package com.wix.pay.twocheckout
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
 
-class JsonTwocheckoutMerchantParser() extends TwocheckoutMerchantParser {
+object JsonTwocheckoutMerchantParser extends TwocheckoutMerchantParser {
   private implicit val formats = DefaultFormats
 
   override def parse(merchantKey: String): TwocheckoutMerchant = {

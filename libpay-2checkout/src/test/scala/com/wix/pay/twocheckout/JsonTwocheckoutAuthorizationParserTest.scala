@@ -7,7 +7,7 @@ import org.specs2.specification.Scope
 
 class JsonTwocheckoutAuthorizationParserTest extends SpecWithJUnit {
   trait Ctx extends Scope {
-    val parser: TwocheckoutAuthorizationParser = new JsonTwocheckoutAuthorizationParser
+    val parser: TwocheckoutAuthorizationParser = JsonTwocheckoutAuthorizationParser
   }
 
   "stringify and then parse" should {
