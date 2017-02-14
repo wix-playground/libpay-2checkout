@@ -1,8 +1,8 @@
 package com.wix.pay.twocheckout.tokenization.html
 
 import com.wix.pay.creditcard.{CreditCard, CreditCardOptionalFields, YearMonth}
-import com.wix.pay.twocheckout.model.Environments
-import com.wix.pay.twocheckout.tokenization.html.model.ErrorCodes
+import com.wix.pay.twocheckout.model.html.{Error, ErrorCodes}
+import com.wix.pay.twocheckout.testkit.TwocheckoutJavascriptSdkDriver
 import org.specs2.mutable.SpecWithJUnit
 import org.specs2.specification.Scope
 
@@ -11,6 +11,9 @@ import org.specs2.specification.Scope
   * @note This test interacts with 2checkout's sandbox servers.
   */
 class HtmlTokenizerTest extends SpecWithJUnit {
+  val driverPort = 10005
+  val driver = new TwocheckoutJavascriptSdkDriver(driverPort)
+
   /**
     * username: 2checkout-Test
     * email: 2checkout-Test@mailinator.com
@@ -30,31 +33,73 @@ class HtmlTokenizerTest extends SpecWithJUnit {
     ))
   )
 
+  val someEnvironment = "some-environment"
+  val someToken = "some-token"
+
   val tokenizer = new HtmlTokenizer(
-    environment = Environments.sandbox
+    jsSdkUrl = s"http://localhost:$driverPort/",
+    environment = someEnvironment
   )
 
-  trait Ctx extends Scope {}
+  trait Ctx extends Scope {
+    driver.reset()
+  }
+
+  step {
+    driver.start()
+  }
+
+  sequential
 
   "tokenize" should {
     "tokenize cards" in new Ctx {
+      driver.aJavascriptSdkRequest().successfullyTokenizes(
+        sellerId = sellerId,
+        publishableKey = publishableKey,
+        ccNo = card.number,
+        cvv = card.csc.get,
+        expMonth = card.expiration.month,
+        expYear = card.expiration.year,
+        environment = someEnvironment,
+        token = someToken
+      )
+
       tokenizer.tokenize(
         sellerId = sellerId,
         publishableKey = publishableKey,
         card = card
       ) must beASuccessfulTry(
-        check = not(beEmpty[String])
+        check = ===(someToken)
       )
     }
 
     "gracefully fail on invalid merchant information" in new Ctx {
+      val someErrorMessage = "some error message"
+      driver.aJavascriptSdkRequest().failsTokenizing(
+        sellerId = sellerId,
+        publishableKey = publishableKey,
+        ccNo = card.number,
+        cvv = card.csc.get,
+        expMonth = card.expiration.month,
+        expYear = card.expiration.year,
+        environment = someEnvironment,
+        error = Error(
+          errorCode = ErrorCodes.unauthorized,
+          errorMsg = someErrorMessage
+        )
+      )
+
       tokenizer.tokenize(
-        sellerId = "123",
-        publishableKey = "invalid-key",
+        sellerId = sellerId,
+        publishableKey = publishableKey,
         card = card
       ) must beAFailedTry.like {
-        case e: Throwable => e.getMessage must contain(ErrorCodes.unauthorized)
+        case e: Throwable => e.getMessage must (contain(ErrorCodes.unauthorized) and contain(someErrorMessage))
       }
     }
+  }
+
+  step {
+    driver.stop()
   }
 }

@@ -4,17 +4,23 @@ import java.net.URLEncoder
 
 import com.gargoylesoftware.htmlunit.{AlertHandler, Page, WebClient}
 import com.wix.pay.creditcard.CreditCard
+import com.wix.pay.twocheckout.model.Environments
+import com.wix.pay.twocheckout.model.html.{Error, TokenizeResponse}
 import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
-import com.wix.pay.twocheckout.tokenization.html.model.{Error, TokenizeResponse}
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
 
 import scala.util.Try
 
+object JavascriptSdkUrls {
+  val production = "https://www.2checkout.com/checkout/api/2co.min.js"
+}
+
 /**
   * [[TwocheckoutTokenizer]] that uses 2checkout's official JavaScript SDK inside a headless browser.
   */
-class HtmlTokenizer(environment: String) extends TwocheckoutTokenizer {
+class HtmlTokenizer(jsSdkUrl: String = JavascriptSdkUrls.production,
+                    environment: String = Environments.production) extends TwocheckoutTokenizer {
   override def tokenize(sellerId: String, publishableKey: String, card: CreditCard): Try[String] = {
     Try {
       val webClient = new WebClient
@@ -27,6 +33,7 @@ class HtmlTokenizer(environment: String) extends TwocheckoutTokenizer {
         })
 
         val tokenizeHtml = HtmlTokenizer.createTokenizeHtml(
+          jsSdkUrl = jsSdkUrl,
           environment = environment,
           sellerId = sellerId,
           publishableKey = publishableKey,
@@ -71,13 +78,13 @@ private object HtmlTokenizer {
     * Communication with 2checkout is done using their official JavaScript SDK. The response, a JSON serialized
     * [[HtmlTokenizerResponse]], is output using window.alert.
     */
-  def createTokenizeHtml(environment: String, sellerId: String, publishableKey: String, card: CreditCard): String = {
+  def createTokenizeHtml(jsSdkUrl: String, environment: String, sellerId: String, publishableKey: String, card: CreditCard): String = {
     s"""
        |<!DOCTYPE html>
        |<html>
        |  <head>
        |    <title>2checkout tokenizer</title>
-       |    <script src="https://www.2checkout.com/checkout/api/2co.min.js"></script>
+       |    <script src="$jsSdkUrl"></script>
        |  </head>
        |  <body>
        |    <script>
