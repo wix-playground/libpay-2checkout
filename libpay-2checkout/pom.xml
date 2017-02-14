@@ -70,6 +70,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.specs2</groupId>
             <artifactId>specs2-mock_2.11</artifactId>
             <version>3.7</version>

@@ -1,22 +1,24 @@
 package com.wix.pay.twocheckout
 
-import com.wix.pay.twocheckout.testkit.TwocheckoutDriver
-import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
-import org.specs2.mock.Mockito
+import com.wix.pay.twocheckout.model.Environments
+import com.wix.pay.twocheckout.model.html.Error
+import com.wix.pay.twocheckout.testkit.{TwocheckoutDriver, TwocheckoutJavascriptSdkDriver}
+import com.wix.pay.twocheckout.tokenization.html.HtmlTokenizer
 import org.specs2.mutable.SpecWithJUnit
 import org.specs2.specification.Scope
 
-import scala.util.{Failure, Success}
-
-class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport with Mockito {
-  val probePort = 10001
-  val driver = new TwocheckoutDriver(probePort)
+class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
+  val gatewayPort = 10001
+  val jsPort = 10002
+  val gatewayDriver = new TwocheckoutDriver(gatewayPort)
+  val jsDriver = new TwocheckoutJavascriptSdkDriver(jsPort)
 
   val someOrderNumber = "someOrderNumber"
   val someToken = "someToken"
 
   step {
-    driver.start()
+    gatewayDriver.start()
+    jsDriver.start()
   }
 
   sequential
@@ -51,22 +53,39 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport wit
   }
 
   step {
-    driver.stop()
+    gatewayDriver.stop()
+    jsDriver.stop()
   }
 
   trait Ctx extends Scope {
-    val tokenizer = mock[TwocheckoutTokenizer]
-    val gateway = new TwocheckoutGateway(s"http://localhost:$probePort", tokenizer)
+    private val tokenizer = new HtmlTokenizer(jsSdkUrl = s"http://localhost:$jsPort")
+    val gateway = new TwocheckoutGateway(s"http://localhost:$gatewayPort", tokenizer)
 
-    driver.reset()
+    gatewayDriver.reset()
 
-    def givenTokenRequestReturnsToken =
-      tokenizer.tokenize(sellerId, publishableKey, creditCard) returns Success(token)
+    def givenTokenRequestReturnsToken = jsDriver.aJavascriptSdkRequest().successfullyTokenizes(
+      sellerId = sellerId,
+      publishableKey = publishableKey,
+      ccNo = creditCard.number,
+      cvv = creditCard.csc.get,
+      expMonth = creditCard.expiration.month,
+      expYear = creditCard.expiration.year,
+      environment = Environments.production,
+      token = token
+    )
 
-    def givenTokenRequestFailsWith(errorMessage: String) =
-      tokenizer.tokenize(sellerId, publishableKey, creditCard) returns Failure(new RuntimeException(errorMessage))
+    def givenTokenRequestFailsWith(errorMessage: String) = jsDriver.aJavascriptSdkRequest().failsTokenizing(
+      sellerId = sellerId,
+      publishableKey = publishableKey,
+      ccNo = creditCard.number,
+      cvv = creditCard.csc.get,
+      expMonth = creditCard.expiration.month,
+      expYear = creditCard.expiration.year,
+      environment = Environments.production,
+      error = Error(errorCode = "300", errorMsg = errorMessage)
+    )
 
-    def givenWorldpaySaleRequest = driver.aSaleRequest(sellerId, privateKey, token, creditCard, currencyAmount, customer, deal)
+    def givenWorldpaySaleRequest = gatewayDriver.aSaleRequest(sellerId, privateKey, token, creditCard, currencyAmount, customer, deal)
     def sale() = gateway.sale(someMerchant, creditCard, payment, Some(customer), Some(deal))
   }
 }

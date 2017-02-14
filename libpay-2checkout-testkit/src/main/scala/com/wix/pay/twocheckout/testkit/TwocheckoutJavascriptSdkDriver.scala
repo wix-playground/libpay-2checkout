@@ -77,6 +77,7 @@ class TwocheckoutJavascriptSdkDriver(port: Int) {
     }
 
     private def respondWith(javascript: String): Unit = {
+      probe.handlers.clear()
       probe.handlers += {
         case HttpRequest(HttpMethods.GET, Uri.Path("/"), _, _, _) =>
           HttpResponse(StatusCodes.OK, HttpEntity(ContentType(MediaTypes.`application/javascript`), javascript))
