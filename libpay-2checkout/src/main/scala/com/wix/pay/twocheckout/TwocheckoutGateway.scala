@@ -6,7 +6,6 @@ import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model._
 import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
 import com.wix.pay.{PaymentErrorException, PaymentGateway, PaymentRejectedException}
-import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.native.JsonMethods._
 
@@ -14,7 +13,7 @@ import scala.util.Try
 
 class TwocheckoutGateway(endpointUrl: String,
                          tokenizer: TwocheckoutTokenizer,
-                         validator: TwocheckoutParamsValidator = TwocheckoutParamsValidator,
+                         requestBuilder: TwocheckoutRequestBuilder = new TwocheckoutRequestBuilder(),
                          merchantParser: TwocheckoutMerchantParser = JsonTwocheckoutMerchantParser) extends PaymentGateway {
 
   private val requestFactory: HttpRequestFactory = new NetHttpTransport().createRequestFactory()
@@ -33,16 +32,15 @@ class TwocheckoutGateway(endpointUrl: String,
 
   override def sale(merchantKey: String, creditCard: CreditCard, payment: Payment, customer: Option[Customer], deal: Option[Deal]): Try[String] = {
     withExceptionHandling {
-      validator.validate(creditCard, payment, customer, deal)
+      validateParams(payment, creditCard)
 
       val merchant = merchantParser.parse(merchantKey)
       val token = tokenizer.tokenize(merchant.sellerId, merchant.publishableKey, creditCard).get
 
-      val url = s"$endpointUrl/checkout/api/1/${merchant.sellerId}/rs/authService"
-      val requestContent = saleRequestContent(merchant, token, creditCard, payment.currencyAmount, customer.get, deal.get)
+      val requestContent = requestBuilder.saleRequestContent(merchant, token, creditCard, payment.currencyAmount, customer, deal)
 
       val response = requestFactory.buildPostRequest(
-        new GenericUrl(url),
+        new GenericUrl(s"$endpointUrl/checkout/api/1/${merchant.sellerId}/rs/authService"),
         new ByteArrayContent("application/json", compact(render(requestContent)).getBytes("UTF-8"))
       ).execute()
 
@@ -52,40 +50,9 @@ class TwocheckoutGateway(endpointUrl: String,
     }
   }
 
-  private def saleRequestContent(merchant: TwocheckoutMerchant,
-                                 token: String,
-                                 creditCard: CreditCard,
-                                 currencyAmount: CurrencyAmount,
-                                 customer: Customer,
-                                 deal: Deal) = {
-    val billingAddress = creditCard.billingAddressDetailed.get
-    val shippingAddress = deal.shippingAddress.get
-    JObject(
-      "sellerId" -> merchant.sellerId,
-      "privateKey" -> merchant.privateKey,
-      "token" -> token,
-      "merchantOrderId" -> deal.invoiceId.get,
-      "currency" -> currencyAmount.currency,
-      "total" -> currencyAmount.amount,
-      "billingAddr" -> JObject(
-        "address1" -> billingAddress.street.get,
-        "city" -> billingAddress.city.get,
-        "zipCode" -> billingAddress.postalCode.get,
-        "phoneNumber" -> customer.phone.get,
-        "email" -> customer.email.get,
-        "country" -> billingAddress.countryCode.get.getISO3Country.toUpperCase,
-        "name" -> creditCard.holderName.get,
-        "state" -> billingAddress.state.get
-      ),
-      "shippingAddr" -> JObject(
-        "address1" -> shippingAddress.street.get,
-        "city" -> shippingAddress.city.get,
-        "zipCode" -> shippingAddress.postalCode.get,
-        "country" -> shippingAddress.countryCode.get.getISO3Country.toUpperCase,
-        "name" -> s"${shippingAddress.firstName.getOrElse("")} ${shippingAddress.lastName.getOrElse("")}".trim,
-        "state" -> shippingAddress.state.get
-      )
-    )
+  private def validateParams(payment: Payment, creditCard: CreditCard): Unit = {
+    require(payment.installments == 1, "2Checkout does not support installments!")
+    require(creditCard.csc.isDefined, "Credit Card CSC is mandatory for 2Checkout!")
   }
 
   override def voidAuthorization(merchantKey: String, authorizationKey: String): Try[String] = {

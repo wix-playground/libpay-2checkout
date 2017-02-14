@@ -17,7 +17,8 @@ trait TwocheckoutTestSupport {
   val publishableKey = "somePublishableKey"
   val privateKey = "somePrivateKey"
   val token = "someToken"
-  val someMerchant = JsonTwocheckoutMerchantParser.stringify(TwocheckoutMerchant(sellerId, publishableKey, privateKey))
+  val someMerchant = TwocheckoutMerchant(sellerId, publishableKey, privateKey)
+  val someMerchantStr = JsonTwocheckoutMerchantParser.stringify(someMerchant)
 
   val billingAddress = AddressDetailed(
     street = Some("billingStreet"),

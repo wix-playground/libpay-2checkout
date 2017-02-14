@@ -26,7 +26,7 @@ object TwocheckoutFakeClient extends App {
     csc = Some("123"), holderName = Some("John Smith"))
     ))
 
-  val tokenizer = new HtmlTokenizer(Environments.sandbox)
+  val tokenizer = new HtmlTokenizer(environment = Environments.sandbox)
 
   val token = tokenizer.tokenize(sellerId, publishableKey, creditCard).get
   println("token = " + token)
@@ -37,26 +37,26 @@ object TwocheckoutFakeClient extends App {
     "sellerId" -> sellerId,
     "privateKey" -> privateKey,
     "token" -> token,
-    "merchantOrderId" -> "test123",
+    "merchantOrderId" -> "NA",
     "currency" -> "USD",
     "total" -> "1.00",
     "billingAddr" -> Map(
-      "name" -> "Testing Tester",
-      "addrLine1" -> "xvxcvxcvxcvcx",
-      "city" -> "Columbus",
-      "state" -> "Ohio",
-      "country" -> "USA",
-      "zipCode" -> "43230",
+      "name" -> "NA",
+      "addrLine1" -> "NA",
+      "city" -> "NA",
+      "state" -> "NA",
+      "country" -> "NA",
+      "zipCode" -> "NA",
       "email" -> "tester@2co.com",
-      "phoneNumber" -> "555-555-5555"
+      "phoneNumber" -> "000"
     ),
     "shippingAddr" -> Map(
-      "name" -> "Ship toMe",
-      "addrLine1" -> "xvxcvxcvxcvcx2",
-      "city" -> "Columbus",
-      "state" -> "Ohio",
-      "country" -> "USA",
-      "zipCode" -> "43230"
+      "name" -> "NA",
+      "addrLine1" -> "NA",
+      "city" -> "NA",
+      "state" -> "NA",
+      "country" -> "NA",
+      "zipCode" -> "NA"
     )
   )
 
