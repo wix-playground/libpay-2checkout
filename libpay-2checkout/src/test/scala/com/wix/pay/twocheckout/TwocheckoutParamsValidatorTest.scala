@@ -7,6 +7,10 @@ import org.specs2.specification.Scope
 
 class TwocheckoutParamsValidatorTest extends SpecWithJUnit with TwocheckoutTestSupport {
   "TwocheckoutParamsValidator" should {
+    "succeed if all parameters pass validation" in new Ctx {
+      validate() must not(throwAn[Exception])
+    }
+
     "fail if payment has more than 1 installment" in new Ctx {
       validate(withPayment = payment.withInstallments(2)) must
         failWithMessage("2Checkout does not support installments!")

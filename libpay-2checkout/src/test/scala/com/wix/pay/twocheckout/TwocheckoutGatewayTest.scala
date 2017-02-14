@@ -25,9 +25,10 @@ class TwocheckoutGatewayTest extends SpecWithJUnit with TwocheckoutTestSupport w
       sale(merchantKey = "invalid") must beParseError
     }
 
-    "validate input" in new Ctx {
+    "validate input & call tokenizer" in new Ctx {
       sale()
       there was one(validator).validate(creditCard, payment, Some(customer), Some(deal))
+      there was one(tokenizer).tokenize(sellerId, publishableKey, creditCard)
     }
   }
 
@@ -38,8 +39,9 @@ class TwocheckoutGatewayTest extends SpecWithJUnit with TwocheckoutTestSupport w
   }
 
   trait Ctx extends Scope {
+    val tokenizer = mock[TwocheckoutTokenizer]
     val validator = mock[TwocheckoutParamsValidator]
-    val gateway = new TwocheckoutGateway("", mock[TwocheckoutTokenizer], validator)
+    val gateway = new TwocheckoutGateway("", tokenizer, validator)
 
     def authorize() =
       gateway.authorize(someMerchant, creditCard, payment, Some(customer), Some(deal))
