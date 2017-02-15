@@ -1,8 +1,5 @@
 package com.wix.pay.twocheckout
 
-import java.io.{BufferedReader, InputStreamReader}
-import java.util.stream.Collectors
-
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.http.{ByteArrayContent, GenericUrl, HttpRequestFactory}
 import com.wix.pay.creditcard.{CreditCard, CreditCardOptionalFields, YearMonth}
@@ -68,6 +65,6 @@ object TwocheckoutFakeClient extends App {
     )
   ).execute()
 
-  val result = new BufferedReader(new InputStreamReader(response.getContent)).lines().collect(Collectors.joining("\n"))
+  val result = response.parseAsString()
   println(result)
 }

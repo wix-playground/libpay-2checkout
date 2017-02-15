@@ -11,7 +11,7 @@ import org.json4s.native.JsonMethods._
 
 import scala.util.Try
 
-class TwocheckoutGateway(endpointUrl: String,
+class TwocheckoutGateway(endpointUrl: String = "https://www.2checkout.com/",
                          tokenizer: TwocheckoutTokenizer,
                          requestBuilder: TwocheckoutRequestBuilder = new TwocheckoutRequestBuilder(),
                          merchantParser: TwocheckoutMerchantParser = JsonTwocheckoutMerchantParser) extends PaymentGateway {
@@ -44,9 +44,13 @@ class TwocheckoutGateway(endpointUrl: String,
         new ByteArrayContent("application/json", compact(render(requestContent)).getBytes("UTF-8"))
       ).execute()
 
-      val responseContent2 = parse(response.getContent)
-      val JString(orderNumber) = responseContent2 \\ "response" \\ "orderNumber"
-      orderNumber
+      try {
+        val responseContent = parse(response.getContent)
+        val JString(orderNumber) = responseContent \\ "response" \\ "orderNumber"
+        orderNumber
+      } finally {
+        response.disconnect()
+      }
     }
   }
 
