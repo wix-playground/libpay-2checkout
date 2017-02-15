@@ -53,14 +53,12 @@ class HtmlTokenizerTest extends SpecWithJUnit {
 
   "tokenize" should {
     "tokenize cards" in new Ctx {
-      driver.aJavascriptSdkRequest().successfullyTokenizes(
+      driver.aJavascriptSdkRequest(
         sellerId = sellerId,
         publishableKey = publishableKey,
-        ccNo = card.number,
-        cvv = card.csc.get,
-        expMonth = card.expiration.month,
-        expYear = card.expiration.year,
         environment = someEnvironment,
+        creditCard = card
+      ).successfullyTokenizes(
         token = someToken
       )
 
@@ -75,14 +73,12 @@ class HtmlTokenizerTest extends SpecWithJUnit {
 
     "gracefully fail on invalid merchant information" in new Ctx {
       val someErrorMessage = "some error message"
-      driver.aJavascriptSdkRequest().failsTokenizing(
+      driver.aJavascriptSdkRequest(
         sellerId = sellerId,
         publishableKey = publishableKey,
-        ccNo = card.number,
-        cvv = card.csc.get,
-        expMonth = card.expiration.month,
-        expYear = card.expiration.year,
         environment = someEnvironment,
+        creditCard = card
+      ).failsTokenizing(
         error = Error(
           errorCode = ErrorCodes.unauthorized,
           errorMsg = someErrorMessage

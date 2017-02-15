@@ -63,25 +63,21 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
 
     gatewayDriver.reset()
 
-    def givenTokenRequestReturnsToken = jsDriver.aJavascriptSdkRequest().successfullyTokenizes(
+    def givenTokenRequestReturnsToken = jsDriver.aJavascriptSdkRequest(
       sellerId = sellerId,
       publishableKey = publishableKey,
-      ccNo = creditCard.number,
-      cvv = creditCard.csc.get,
-      expMonth = creditCard.expiration.month,
-      expYear = creditCard.expiration.year,
       environment = Environments.production,
+      creditCard = creditCard
+    ).successfullyTokenizes(
       token = token
     )
 
-    def givenTokenRequestFailsWith(errorMessage: String) = jsDriver.aJavascriptSdkRequest().failsTokenizing(
+    def givenTokenRequestFailsWith(errorMessage: String) = jsDriver.aJavascriptSdkRequest(
       sellerId = sellerId,
       publishableKey = publishableKey,
-      ccNo = creditCard.number,
-      cvv = creditCard.csc.get,
-      expMonth = creditCard.expiration.month,
-      expYear = creditCard.expiration.year,
       environment = Environments.production,
+      creditCard = creditCard
+    ).failsTokenizing(
       error = Error(errorCode = "300", errorMsg = errorMessage)
     )
 
