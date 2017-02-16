@@ -40,6 +40,7 @@ object TwocheckoutFakeClient extends App {
     "billingAddr" -> Map(
       "name" -> "NA",
       "addrLine1" -> "NA",
+      "addrLine2" -> "NA",
       "city" -> "NA",
       "state" -> "NA",
       "country" -> "NA",

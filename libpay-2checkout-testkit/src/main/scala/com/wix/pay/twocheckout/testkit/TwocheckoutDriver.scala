@@ -89,7 +89,8 @@ class TwocheckoutDriver(port: Int) {
 
     private val billingAddress = creditCard.billingAddressDetailed
     private val requestBillingAddressMap = Map(
-      "address1" -> billingAddress.flatMap(_.street).getOrElse("NA"),
+      "addrLine1" -> billingAddress.flatMap(_.street).getOrElse("NA"),
+      "addrLine2" -> "NA",
       "city" -> billingAddress.flatMap(_.city).getOrElse("NA"),
       "zipCode" -> billingAddress.flatMap(_.postalCode).getOrElse("NA"),
       "phoneNumber" -> customer.flatMap(_.phone).getOrElse("000"),
@@ -99,13 +100,13 @@ class TwocheckoutDriver(port: Int) {
       "state" -> billingAddress.flatMap(_.state).getOrElse("NA")
     )
     private val responseBillingAddressMap = requestBillingAddressMap ++ Map(
-      "addrLine2" -> null,
       "phoneExtension" -> null
     )
 
     private val shippingAddress = deal.flatMap(_.shippingAddress)
     private val requestShippingAddressMap = Map(
-      "address1" -> shippingAddress.flatMap(_.street).getOrElse("NA"),
+      "addrLine1" -> shippingAddress.flatMap(_.street).getOrElse("NA"),
+      "addrLine2" -> "NA",
       "city" -> shippingAddress.flatMap(_.city).getOrElse("NA"),
       "zipCode" -> shippingAddress.flatMap(_.postalCode).getOrElse("NA"),
       "country" -> shippingAddress.flatMap(_.countryCode).map(_.getISO3Country.toUpperCase).getOrElse("NA"),
@@ -113,7 +114,6 @@ class TwocheckoutDriver(port: Int) {
       "state" -> shippingAddress.flatMap(_.state).getOrElse("NA")
     )
     private val responseShippingAddressMap = requestShippingAddressMap ++ Map(
-      "addrLine2" -> null,
       "phoneNumber" -> null,
       "phoneExtension" -> null,
       "email" -> null

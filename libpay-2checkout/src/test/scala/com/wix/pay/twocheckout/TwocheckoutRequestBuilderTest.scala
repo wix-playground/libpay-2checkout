@@ -21,7 +21,8 @@ class TwocheckoutRequestBuilderTest extends SpecWithJUnit with TwocheckoutTestSu
         "total" -> currencyAmount.amount,
         "billingAddr" -> JObject(
           "name" -> creditCard.holderName.get,
-          "address1" -> billingAddress.street.get,
+          "addrLine1" -> billingAddress.street.get,
+          "addrLine2" -> defaultNA,
           "city" -> billingAddress.city.get,
           "country" -> billingAddress.countryCode.get.getISO3Country,
           "state" -> billingAddress.state.get,
@@ -31,7 +32,8 @@ class TwocheckoutRequestBuilderTest extends SpecWithJUnit with TwocheckoutTestSu
         ),
         "shippingAddr" -> JObject(
           "name" -> s"${shippingAddress.firstName.get} ${shippingAddress.lastName.get}",
-          "address1" -> shippingAddress.street.get,
+          "addrLine1" -> shippingAddress.street.get,
+          "addrLine2" -> defaultNA,
           "city" -> shippingAddress.city.get,
           "country" -> shippingAddress.countryCode.get.getISO3Country,
           "state" -> shippingAddress.state.get,
@@ -58,6 +60,14 @@ class TwocheckoutRequestBuilderTest extends SpecWithJUnit with TwocheckoutTestSu
 
     "use the default unavailable value for billing street when credit card billing address street is empty" in new Ctx {
       saleRequest(withCreditCard = creditCard.withBillingAddress(_.withStreet(""))).billingStreet must beNA
+    }
+
+    "use the default unavailable value for billing street2 when credit card billing address is missing" in new Ctx {
+      saleRequest(withCreditCard = creditCard.withoutBillingAddress).billingStreet2 must beNA
+    }
+
+    "use the default unavailable value for billing street when credit card billing address is present" in new Ctx {
+      saleRequest(withCreditCard = creditCard).billingStreet2 must beNA
     }
 
     "use the default unavailable value for billing city when credit card billing address is missing" in new Ctx {
@@ -172,6 +182,14 @@ class TwocheckoutRequestBuilderTest extends SpecWithJUnit with TwocheckoutTestSu
       saleRequest(withDeal = Some(deal.withShippingAddress(_.withoutStreet))).shippingStreet must beNA
     }
 
+    "use the default unavailable value for shipping street when deal shipping address is missing" in new Ctx {
+      saleRequest(withDeal = Some(deal.withoutShippingAddress)).shippingStreet2 must beNA
+    }
+
+    "use the default unavailable value for shipping street when deal shipping address is present" in new Ctx {
+      saleRequest(withDeal = Some(deal)).shippingStreet2 must beNA
+    }
+
     "use the default unavailable value for shipping street when deal shipping address street is empty" in new Ctx {
       saleRequest(withDeal = Some(deal.withShippingAddress(_.withStreet("")))).shippingStreet must beNA
     }
@@ -246,7 +264,8 @@ class TwocheckoutRequestBuilderTest extends SpecWithJUnit with TwocheckoutTestSu
 
       def billingAddr = o \\ "billingAddr"
       def billingName = billingAddr \\ "name"
-      def billingStreet = billingAddr \\ "address1"
+      def billingStreet = billingAddr \\ "addrLine1"
+      def billingStreet2 = billingAddr \\ "addrLine2"
       def billingCity = billingAddr \\ "city"
       def billingCountry = billingAddr \\ "country"
       def billingState = billingAddr \\ "state"
@@ -256,7 +275,8 @@ class TwocheckoutRequestBuilderTest extends SpecWithJUnit with TwocheckoutTestSu
 
       def shippingAddr = o \\ "shippingAddr"
       def shippingName = shippingAddr \\ "name"
-      def shippingStreet = shippingAddr \\ "address1"
+      def shippingStreet = shippingAddr \\ "addrLine1"
+      def shippingStreet2 = shippingAddr \\ "addrLine2"
       def shippingCity = shippingAddr \\ "city"
       def shippingCountry = shippingAddr \\ "country"
       def shippingState = shippingAddr \\ "state"
