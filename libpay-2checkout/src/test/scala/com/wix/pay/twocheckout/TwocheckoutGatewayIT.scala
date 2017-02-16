@@ -81,7 +81,7 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
       error = Error(errorCode = "300", errorMsg = errorMessage)
     )
 
-    def givenWorldpaySaleRequest = gatewayDriver.aSaleRequest(sellerId, privateKey, token, creditCard, currencyAmount, customer, deal)
+    def givenWorldpaySaleRequest = gatewayDriver.aSaleRequest(sellerId, privateKey, token, creditCard, currencyAmount, Some(customer), Some(deal))
     def sale() = gateway.sale(someMerchantStr, creditCard, payment, Some(customer), Some(deal))
   }
 }

@@ -2,7 +2,7 @@ package com.wix.pay.twocheckout.testkit
 
 import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe
 import com.wix.pay.creditcard.CreditCard
-import com.wix.pay.model.{CurrencyAmount, Customer, Deal}
+import com.wix.pay.model.{CurrencyAmount, Customer, Deal, ShippingAddress}
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
 import spray.http._
@@ -21,8 +21,8 @@ class TwocheckoutDriver(port: Int) {
                    token: String,
                    creditCard: CreditCard,
                    currencyAmount: CurrencyAmount,
-                   customer: Customer,
-                   deal: Deal) = {
+                   customer: Option[Customer],
+                   deal: Option[Deal]) = {
     SaleRequest(sellerId, privateKey, token, creditCard, currencyAmount, customer, deal)
   }
 
@@ -31,8 +31,8 @@ class TwocheckoutDriver(port: Int) {
                          token: String,
                          creditCard: CreditCard,
                          currencyAmount: CurrencyAmount,
-                         customer: Customer,
-                         deal: Deal) {
+                         customer: Option[Customer],
+                         deal: Option[Deal]) {
 
     def returns(orderNumber: String): Unit = {
       val response = removeEmptyValuesFromMap(validResponse(orderNumber))
@@ -80,37 +80,37 @@ class TwocheckoutDriver(port: Int) {
       "sellerId" -> sellerId,
       "privateKey" -> privateKey,
       "token" -> token,
-      "merchantOrderId" -> deal.invoiceId.get,
+      "merchantOrderId" -> deal.flatMap(_.invoiceId).getOrElse("NA"),
       "currency" -> currencyAmount.currency,
       "total" -> currencyAmount.amount,
       "billingAddr" -> requestBillingAddressMap,
       "shippingAddr" -> requestShippingAddressMap
     )
 
-    private val billingAddress = creditCard.billingAddressDetailed.get
+    private val billingAddress = creditCard.billingAddressDetailed
     private val requestBillingAddressMap = Map(
-      "address1" -> billingAddress.street.get,
-      "city" -> billingAddress.city.get,
-      "zipCode" -> billingAddress.postalCode.get,
-      "phoneNumber" -> customer.phone.get,
-      "email" -> customer.email.get,
-      "country" -> billingAddress.countryCode.get.getISO3Country.toUpperCase,
-      "name" -> creditCard.holderName.get,
-      "state" -> billingAddress.state.get
+      "address1" -> billingAddress.flatMap(_.street).getOrElse("NA"),
+      "city" -> billingAddress.flatMap(_.city).getOrElse("NA"),
+      "zipCode" -> billingAddress.flatMap(_.postalCode).getOrElse("NA"),
+      "phoneNumber" -> customer.flatMap(_.phone).getOrElse("000"),
+      "email" -> customer.flatMap(_.email).getOrElse("example@example.org"),
+      "country" -> billingAddress.flatMap(_.countryCode).map(_.getISO3Country.toUpperCase).getOrElse("NA"),
+      "name" -> creditCard.holderName.getOrElse("NA"),
+      "state" -> billingAddress.flatMap(_.state).getOrElse("NA")
     )
     private val responseBillingAddressMap = requestBillingAddressMap ++ Map(
       "addrLine2" -> null,
       "phoneExtension" -> null
     )
 
-    private val shippingAddress = deal.shippingAddress.get
+    private val shippingAddress = deal.flatMap(_.shippingAddress)
     private val requestShippingAddressMap = Map(
-      "address1" -> shippingAddress.street,
-      "city" -> shippingAddress.city,
-      "zipCode" -> shippingAddress.postalCode,
-      "country" -> shippingAddress.countryCode.map(_.getISO3Country.toUpperCase),
-      "name" -> s"${shippingAddress.firstName.getOrElse("")} ${shippingAddress.lastName.getOrElse("")}".trim,
-      "state" -> shippingAddress.state
+      "address1" -> shippingAddress.flatMap(_.street).getOrElse("NA"),
+      "city" -> shippingAddress.flatMap(_.city).getOrElse("NA"),
+      "zipCode" -> shippingAddress.flatMap(_.postalCode).getOrElse("NA"),
+      "country" -> shippingAddress.flatMap(_.countryCode).map(_.getISO3Country.toUpperCase).getOrElse("NA"),
+      "name" -> shippingAddressName(shippingAddress),
+      "state" -> shippingAddress.flatMap(_.state).getOrElse("NA")
     )
     private val responseShippingAddressMap = requestShippingAddressMap ++ Map(
       "addrLine2" -> null,
@@ -118,6 +118,11 @@ class TwocheckoutDriver(port: Int) {
       "phoneExtension" -> null,
       "email" -> null
     )
+
+    private def shippingAddressName(shippingAddress: Option[ShippingAddress]): String = {
+      val name = s"${shippingAddress.flatMap(_.firstName).getOrElse("")} ${shippingAddress.flatMap(_.lastName).getOrElse("")}".trim
+      if (name.nonEmpty) name else "NA"
+    }
 
     implicit val formats = DefaultFormats
     private def toJson(map: Map[String, Any]): String = Serialization.write(map)
@@ -159,7 +164,7 @@ class TwocheckoutDriver(port: Int) {
         "transactionId" -> "9093733405923",
         "billingAddr" -> responseBillingAddressMap,
         "shippingAddr" -> responseShippingAddressMap,
-        "merchantOrderId" -> deal.invoiceId.get,
+        "merchantOrderId" -> deal.flatMap(_.invoiceId).getOrElse("NA"),
         "orderNumber" -> orderNumber,
         "recurrentInstallmentId" -> null,
         "responseMsg" -> "Successfully authorized the provided credit card",
