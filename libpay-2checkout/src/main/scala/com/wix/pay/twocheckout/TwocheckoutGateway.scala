@@ -11,7 +11,7 @@ import org.json4s.native.JsonMethods._
 
 import scala.util.Try
 
-class TwocheckoutGateway(endpointUrl: String = "https://www.2checkout.com/",
+class TwocheckoutGateway(endpointUrl: String = "https://www.2checkout.com",
                          tokenizer: TwocheckoutTokenizer,
                          requestBuilder: TwocheckoutRequestBuilder = new TwocheckoutRequestBuilder(),
                          merchantParser: TwocheckoutMerchantParser = JsonTwocheckoutMerchantParser) extends PaymentGateway {

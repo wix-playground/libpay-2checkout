@@ -5,6 +5,7 @@ import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.{CurrencyAmount, Customer, Deal, ShippingAddress}
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
+import spray.http.Uri.Path
 import spray.http._
 
 class TwocheckoutDriver(port: Int) {
@@ -59,7 +60,7 @@ class TwocheckoutDriver(port: Int) {
     private def respondWith(status: StatusCode, content: String): Unit = {
       probe.handlers += {
         case HttpRequest(HttpMethods.POST, requestPath, headers, entity, _)
-          if requestPath.path == Uri(s"https://sandbox.2checkout.com/checkout/api/1/$sellerId/rs/authService").path &&
+          if requestPath.path == Path(s"/checkout/api/1/$sellerId/rs/authService") &&
             isJson(headers) &&
             isStubbedEntity(entity) =>
           HttpResponse(status = status, entity = content)
