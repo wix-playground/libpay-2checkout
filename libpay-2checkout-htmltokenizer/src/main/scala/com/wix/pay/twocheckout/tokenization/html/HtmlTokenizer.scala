@@ -24,6 +24,9 @@ class HtmlTokenizer(jsSdkUrl: String = JavascriptSdkUrls.production,
   override def tokenize(sellerId: String, publishableKey: String, card: CreditCard): Try[String] = {
     Try {
       val webClient = new WebClient
+      webClient.getOptions.setCssEnabled(false)
+      webClient.getJavaScriptEngine.getContextFactory.enterContext().setOptimizationLevel(9)
+
       try {
         var alertMessage: Option[String] = None
         webClient.setAlertHandler(new AlertHandler {
