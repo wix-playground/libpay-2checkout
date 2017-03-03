@@ -67,7 +67,7 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
       sellerId = sellerId,
       publishableKey = publishableKey,
       environment = Environments.production,
-      creditCard = creditCard
+      creditCard = someCreditCard
     ).successfullyTokenizes(
       token = token
     )
@@ -76,12 +76,12 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
       sellerId = sellerId,
       publishableKey = publishableKey,
       environment = Environments.production,
-      creditCard = creditCard
+      creditCard = someCreditCard
     ).failsTokenizing(
       error = Error(errorCode = "300", errorMsg = errorMessage)
     )
 
-    def givenWorldpaySaleRequest = gatewayDriver.aSaleRequest(sellerId, privateKey, token, creditCard, currencyAmount, Some(customer), Some(deal))
-    def sale() = gateway.sale(someMerchantStr, creditCard, payment, Some(customer), Some(deal))
+    def givenWorldpaySaleRequest = gatewayDriver.aSaleRequest(sellerId, privateKey, token, someCreditCard, someCurrencyAmount, Some(someCustomer), Some(someDeal))
+    def sale() = gateway.sale(someMerchantStr, someCreditCard, somePayment, Some(someCustomer), Some(someDeal))
   }
 }

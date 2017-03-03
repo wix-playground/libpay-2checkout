@@ -46,7 +46,7 @@ class TwocheckoutGateway(endpointUrl: String = "https://www.2checkout.com",
 
       try {
         val responseContent = parse(response.getContent)
-        val JString(orderNumber) = responseContent \\ "response" \\ "orderNumber"
+        val JString(orderNumber) = responseContent \ "response" \ "orderNumber"
         orderNumber
       } finally {
         response.disconnect()
@@ -77,10 +77,10 @@ class TwocheckoutGateway(endpointUrl: String = "https://www.2checkout.com",
 
   private def handleHttpException(e: HttpResponseException): Nothing = {
     val errorContent = parse(e.getContent)
-    val JString(errorCode) = errorContent \\ "exception" \\ "errorCode"
+    val JString(errorCode) = errorContent \ "exception" \ "errorCode"
     if (e.getStatusCode == 400 && errorCode.toInt >= 600) {
       // Errors with 2Checkout's custom error code above 600 -> credit card rejected
-      val JString(errorMessage) = errorContent \\ "exception" \\ "errorMsg"
+      val JString(errorMessage) = errorContent \ "exception" \ "errorMsg"
       throw PaymentRejectedException(errorMessage, e)
     } else {
       throw PaymentErrorException(e.getMessage, e)
