@@ -136,11 +136,11 @@ class TwocheckoutRequestBuilderTest extends SpecWithJUnit with TwocheckoutTestSu
       saleRequest(withCustomer = None).billingEmail must beDefaultEmail
     }
 
-    "use the default email value for billing phone number when customer email is missing" in new Ctx {
+    "use the default email value for billing email when customer email is missing" in new Ctx {
       saleRequest(withCustomer = Some(someCustomer.withoutEmail)).billingEmail must beDefaultEmail
     }
 
-    "use the default email value for billing phone number when customer email is empty" in new Ctx {
+    "use the default email value for billing email when customer email is empty" in new Ctx {
       saleRequest(withCustomer = Some(someCustomer.withEmail(""))).billingEmail must beDefaultEmail
     }
 
