@@ -3,12 +3,15 @@ package com.wix.pay.twocheckout.testkit
 import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.{CurrencyAmount, Customer, Deal, ShippingAddress}
+import com.wix.pay.twocheckout.tokenization.RSAPublicKey
+import org.apache.commons.codec.binary.Base64
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
 import spray.http.Uri.Path
 import spray.http._
 
 class TwocheckoutDriver(port: Int) {
+  implicit val formats = DefaultFormats
   private val probe = new EmbeddedHttpProbe(port, EmbeddedHttpProbe.NotFoundHandler)
 
   def reset(): Unit = probe.reset()
@@ -25,6 +28,18 @@ class TwocheckoutDriver(port: Int) {
                    customer: Option[Customer],
                    deal: Option[Deal]) = {
     SaleRequest(sellerId, privateKey, token, creditCard, currencyAmount, customer, deal)
+  }
+
+  def aPublicKeyRequest() = {
+    PublicKeyRequest()
+  }
+
+  def aPretokenRequest(sellerId: String, publishableKey: String) = {
+    PretokenRequest(sellerId, publishableKey)
+  }
+
+  def aTokenRequest(sellerId: String) = {
+    TokenRequest(sellerId)
   }
 
   case class SaleRequest(sellerId: String,
@@ -125,7 +140,6 @@ class TwocheckoutDriver(port: Int) {
       if (name.nonEmpty) name else "NA"
     }
 
-    implicit val formats = DefaultFormats
     private def toJson(map: Map[String, Any]): String = Serialization.write(map)
     private def toMap(entity: HttpEntity): Map[String, Any] = Serialization.read[Map[String, Any]](entity.asString)
 
@@ -175,5 +189,99 @@ class TwocheckoutDriver(port: Int) {
       ),
       "exception" -> null
     )
+  }
+
+  case class PublicKeyRequest() {
+
+    def returns(publicKey: RSAPublicKey): Unit = {
+      respondWith(StatusCodes.Accepted,
+        s"""
+           first=1234;
+           publicKey={'m':'${publicKey.base64Modulus}','e':'${publicKey.base64Exp}'};
+           anotherField='asdf';
+         """.stripMargin)
+    }
+
+    def failsWith(message: String): Unit = {
+      respondWith(StatusCodes.InternalServerError, message)
+    }
+
+    def returnsNoKey() = {
+      respondWith(StatusCodes.Accepted,
+        s"""
+           first=1234;
+           anotherField='asdf';
+         """.stripMargin)
+    }
+
+    private def respondWith(status: StatusCode, content: String): Unit = {
+      probe.handlers += {
+        case HttpRequest(HttpMethods.GET, requestPath, headers, entity, _)
+          if requestPath.path startsWith Path(s"/checkout/api/script/publickey/") =>
+          HttpResponse(status = status, entity = content)
+      }
+    }
+  }
+
+  case class PretokenRequest(sellerId: String, publishableKey: String) {
+
+    def returns(preToken: String) = {
+      respondWith(
+        StatusCodes.Accepted,
+        s"""{"response" : {"type":"PreTokenResponse", "preToken":"$preToken"}, "exception" : null}"""
+      )
+    }
+
+    def failsWith(message: String, status: Int): Unit = {
+      respondWith(
+        StatusCodes.Accepted,
+        s"""{"exception":{"errorMsg":"$message","httpStatus":"$status","exception":false,"errorCode":"900"}, "response": null}"""
+      )
+    }
+
+    private def isStubbed(uri: Uri): Boolean = {
+      val payload = uri.query.getOrElse("payload", "{}")
+      val json = Serialization.read[Map[String, String]](payload)
+      json("sellerId") == sellerId && json("publicKey") == Base64.encodeBase64String(publishableKey.getBytes("utf-8"))
+    }
+
+    private def respondWith(status: StatusCode, content: String): Unit = {
+      probe.handlers += {
+        case HttpRequest(HttpMethods.GET, uri, headers, entity, _)
+          if uri.path == Path(s"/checkout/api/1/$sellerId/rs/preTokenService") && isStubbed(uri) =>
+          HttpResponse(status = status, entity = content)
+      }
+    }
+  }
+
+  case class TokenRequest(sellerId: String) {
+    def returns(token: String) = {
+      respondWith(
+        StatusCodes.Accepted,
+        s"""{"response" : {"type":"TokenResponse", "token":{"dateCreated":1488854095833, "token":"$token"}}, "exception" : null}"""
+      )
+    }
+
+    def failsWith(message: String, status: Int): Unit = {
+      respondWith(
+        StatusCodes.Accepted,
+        s"""{"exception":{"errorMsg":"$message","httpStatus":"$status","exception":false,"errorCode":"900"}, "response": null}"""
+      )
+    }
+
+    //TODO: add check for encrypted content
+    private def isStubbed(uri: Uri): Boolean = {
+      val payload = uri.query.getOrElse("payload", "{}")
+      val json = Serialization.read[Map[String, String]](payload)
+      json("sellerId") == sellerId
+    }
+
+    private def respondWith(status: StatusCode, content: String): Unit = {
+      probe.handlers += {
+        case HttpRequest(HttpMethods.GET, uri, headers, entity, _)
+          if uri.path == Path(s"/checkout/api/1/$sellerId/rs/tokenService") && isStubbed(uri) =>
+          HttpResponse(status = status, entity = content)
+      }
+    }
   }
 }

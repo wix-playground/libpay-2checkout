@@ -1,24 +1,19 @@
 package com.wix.pay.twocheckout
 
-import com.wix.pay.twocheckout.model.Environments
-import com.wix.pay.twocheckout.model.html.Error
 import com.wix.pay.twocheckout.testkit.{TwocheckoutDriver, TwocheckoutJavascriptSdkDriver}
-import com.wix.pay.twocheckout.tokenization.html.HtmlTokenizer
+import com.wix.pay.twocheckout.tokenizer.HttpTwocheckoutTokenizer
 import org.specs2.mutable.SpecWithJUnit
 import org.specs2.specification.Scope
 
 class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
-  val gatewayPort = 10001
-  val jsPort = 10002
+  val gatewayPort = 10002
   val gatewayDriver = new TwocheckoutDriver(gatewayPort)
-  val jsDriver = new TwocheckoutJavascriptSdkDriver(jsPort)
 
   val someOrderNumber = "someOrderNumber"
   val someToken = "someToken"
 
   step {
     gatewayDriver.start()
-    jsDriver.start()
   }
 
   sequential
@@ -54,32 +49,24 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
 
   step {
     gatewayDriver.stop()
-    jsDriver.stop()
   }
 
   trait Ctx extends Scope {
-    private val tokenizer = new HtmlTokenizer(jsSdkUrl = s"http://localhost:$jsPort")
+    private val tokenizer = new HttpTwocheckoutTokenizer(s"http://localhost:$gatewayPort")
     val gateway = new TwocheckoutGateway(s"http://localhost:$gatewayPort", tokenizer)
 
     gatewayDriver.reset()
 
-    def givenTokenRequestReturnsToken = jsDriver.aJavascriptSdkRequest(
-      sellerId = sellerId,
-      publishableKey = publishableKey,
-      environment = Environments.production,
-      creditCard = someCreditCard
-    ).successfullyTokenizes(
-      token = token
-    )
+    def givenTokenRequestReturnsToken = {
+      gatewayDriver.aPublicKeyRequest() returns somePublicKey
+      gatewayDriver.aPretokenRequest(sellerId, publishableKey) returns somePretoken
+      gatewayDriver.aTokenRequest(sellerId) returns token
+    }
 
-    def givenTokenRequestFailsWith(errorMessage: String) = jsDriver.aJavascriptSdkRequest(
-      sellerId = sellerId,
-      publishableKey = publishableKey,
-      environment = Environments.production,
-      creditCard = someCreditCard
-    ).failsTokenizing(
-      error = Error(errorCode = "300", errorMsg = errorMessage)
-    )
+    def givenTokenRequestFailsWith(errorMessage: String) = {
+      gatewayDriver.aPublicKeyRequest() returns somePublicKey
+      gatewayDriver.aPretokenRequest(sellerId, publishableKey) failsWith(errorMessage, 500)
+    }
 
     def givenWorldpaySaleRequest = gatewayDriver.aSaleRequest(sellerId, privateKey, token, someCreditCard, someCurrencyAmount, Some(someCustomer), Some(someDeal))
     def sale() = gateway.sale(someMerchantStr, someCreditCard, somePayment, Some(someCustomer), Some(someDeal))
