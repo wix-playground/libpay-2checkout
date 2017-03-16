@@ -1,6 +1,7 @@
 package com.wix.pay.twocheckout.tokenization.html
 
 import com.wix.pay.creditcard.{CreditCard, CreditCardOptionalFields, YearMonth}
+import com.wix.pay.twocheckout.model.{TwocheckoutEnvironment, TwocheckoutSettings}
 import com.wix.pay.twocheckout.model.html.{Error, ErrorCodes}
 import com.wix.pay.twocheckout.testkit.TwocheckoutJavascriptSdkDriver
 import org.specs2.mutable.SpecWithJUnit
@@ -33,13 +34,14 @@ class HtmlTokenizerTest extends SpecWithJUnit {
     ))
   )
 
-  val someEnvironment = "some-environment"
+  val sandboxMode = false
   val someToken = "some-token"
+  val someSettings = TwocheckoutSettings(TwocheckoutEnvironment(
+    endpointUrl = s"http://localhost:$driverPort/",
+    jsSdkUrl = s"http://localhost:$driverPort/"
+  ))
 
-  val tokenizer = new HtmlTokenizer(
-    jsSdkUrl = s"http://localhost:$driverPort/",
-    environment = someEnvironment
-  )
+  val tokenizer = new HtmlTokenizer(someSettings)
 
   trait Ctx extends Scope {
     driver.reset()
@@ -56,7 +58,7 @@ class HtmlTokenizerTest extends SpecWithJUnit {
       driver.aJavascriptSdkRequest(
         sellerId = sellerId,
         publishableKey = publishableKey,
-        environment = someEnvironment,
+        environment = someSettings.environment(sandboxMode),
         creditCard = card
       ).successfullyTokenizes(
         token = someToken
@@ -65,7 +67,8 @@ class HtmlTokenizerTest extends SpecWithJUnit {
       tokenizer.tokenize(
         sellerId = sellerId,
         publishableKey = publishableKey,
-        card = card
+        card = card,
+        sandboxMode = sandboxMode
       ) must beASuccessfulTry(
         check = ===(someToken)
       )
@@ -76,7 +79,7 @@ class HtmlTokenizerTest extends SpecWithJUnit {
       driver.aJavascriptSdkRequest(
         sellerId = sellerId,
         publishableKey = publishableKey,
-        environment = someEnvironment,
+        environment = someSettings.environment(sandboxMode),
         creditCard = card
       ).failsTokenizing(
         error = Error(
@@ -88,7 +91,8 @@ class HtmlTokenizerTest extends SpecWithJUnit {
       tokenizer.tokenize(
         sellerId = sellerId,
         publishableKey = publishableKey,
-        card = card
+        card = card,
+        sandboxMode = sandboxMode
       ) must beAFailedTry.like {
         case e: Throwable => e.getMessage must (contain(ErrorCodes.unauthorized) and contain(someErrorMessage))
       }

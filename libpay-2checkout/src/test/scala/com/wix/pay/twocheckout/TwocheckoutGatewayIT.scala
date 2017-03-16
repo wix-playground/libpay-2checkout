@@ -1,5 +1,6 @@
 package com.wix.pay.twocheckout
 
+import com.wix.pay.twocheckout.model.{TwocheckoutEnvironment, TwocheckoutSettings}
 import com.wix.pay.twocheckout.testkit.{TwocheckoutDriver, TwocheckoutJavascriptSdkDriver}
 import com.wix.pay.twocheckout.tokenizer.HttpTwocheckoutTokenizer
 import org.specs2.mutable.SpecWithJUnit
@@ -52,8 +53,9 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
   }
 
   trait Ctx extends Scope {
-    private val tokenizer = new HttpTwocheckoutTokenizer(s"http://localhost:$gatewayPort")
-    val gateway = new TwocheckoutGateway(s"http://localhost:$gatewayPort", tokenizer)
+    private val settings = TwocheckoutSettings(TwocheckoutEnvironment(s"http://localhost:$gatewayPort", s"http://localhost:$gatewayPort"))
+    private val tokenizer = new HttpTwocheckoutTokenizer(settings)
+    val gateway = new TwocheckoutGateway(settings, tokenizer)
 
     gatewayDriver.reset()
 

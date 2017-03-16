@@ -6,27 +6,29 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.http.{GenericUrl, HttpRequestFactory}
 import com.wix.pay.PaymentErrorException
 import com.wix.pay.creditcard.CreditCard
+import com.wix.pay.twocheckout.model.TwocheckoutSettings
 import com.wix.pay.twocheckout.tokenization.{RSAPublicKey, RSAUtils, TwocheckoutTokenizer}
 import org.json4s._
 import org.json4s.native.JsonMethods._
 
 import scala.util.Try
 
-class HttpTwocheckoutTokenizer(endpointUrl: String = "https://www.2checkout.com") extends TwocheckoutTokenizer {
+class HttpTwocheckoutTokenizer(settings: TwocheckoutSettings) extends TwocheckoutTokenizer {
   private implicit val formats = DefaultFormats
 
   private val requestBuilder = new TokenizerRequestBuilder
   private val requestFactory: HttpRequestFactory = new NetHttpTransport().createRequestFactory()
 
-  override def tokenize(sellerId: String, publishableKey: String, card: CreditCard): Try[String] = {
+  override def tokenize(sellerId: String, publishableKey: String, card: CreditCard, sandboxMode: Boolean): Try[String] = {
     Try {
-      val key = publicKey
-      val pretoken = preTokenFor(sellerId, publishableKey)
-      tokenFor(sellerId, publishableKey, pretoken, key, card)
+      val endpoint = settings.endpointUrl(sandboxMode)
+      val key = publicKey(endpoint)
+      val pretoken = preTokenFor(endpoint, sellerId, publishableKey)
+      tokenFor(endpoint, sellerId, publishableKey, pretoken, key, card)
     }
   }
 
-  private def tokenFor(sellerId: String, publishableKey: String, preToken: String,
+  private def tokenFor(endpointUrl: String, sellerId: String, publishableKey: String, preToken: String,
                        publicKey: RSAPublicKey, card: CreditCard): String = {
     val rawRequest = requestBuilder.innerTokenRequest(card, publishableKey, preToken)
     val encrypted = RSAUtils.rsaEncrypt(publicKey, rawRequest)
@@ -40,7 +42,7 @@ class HttpTwocheckoutTokenizer(endpointUrl: String = "https://www.2checkout.com"
     }
   }
 
-  private def preTokenFor(sellerId: String, publishableKey: String): String = {
+  private def preTokenFor(endpointUrl: String, sellerId: String, publishableKey: String): String = {
     val payload = URLEncoder.encode(requestBuilder.pretokenRequest(sellerId, publishableKey), "utf-8")
     val requestUrl = s"$endpointUrl/checkout/api/1/$sellerId/rs/preTokenService?payload=$payload"
     withJsonResponseFor(requestUrl) { response =>
@@ -48,7 +50,7 @@ class HttpTwocheckoutTokenizer(endpointUrl: String = "https://www.2checkout.com"
     }
   }
 
-  private def publicKey: RSAPublicKey = {
+  private def publicKey(endpointUrl: String): RSAPublicKey = {
     val requestUrl = s"$endpointUrl/checkout/api/script/publickey/${System.currentTimeMillis}"
     withResponseFor(requestUrl) { response =>
       val regex = "publicKey\\=(\\{.*\\});".r

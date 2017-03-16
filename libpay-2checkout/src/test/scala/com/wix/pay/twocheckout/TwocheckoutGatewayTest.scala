@@ -2,6 +2,7 @@ package com.wix.pay.twocheckout
 
 import com.wix.pay.creditcard._
 import com.wix.pay.model.{Customer, Deal, Payment}
+import com.wix.pay.twocheckout.model.{TwocheckoutEnvironment, TwocheckoutSettings}
 import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecWithJUnit
@@ -39,7 +40,7 @@ class TwocheckoutGatewayTest extends SpecWithJUnit with TwocheckoutTestSupport w
 
     "call tokenizer & request builder" in new Ctx {
       sale()
-      there was one(tokenizer).tokenize(sellerId, publishableKey, someCreditCard)
+      there was one(tokenizer).tokenize(sellerId, publishableKey, someCreditCard, false)
       there was one(requestBuilder).saleRequestContent(someMerchant, token, someCreditCard, someCurrencyAmount, Some(someCustomer), Some(someDeal))
     }
   }
@@ -51,10 +52,11 @@ class TwocheckoutGatewayTest extends SpecWithJUnit with TwocheckoutTestSupport w
   }
 
   trait Ctx extends Scope {
+    val settings = TwocheckoutSettings(TwocheckoutEnvironment("", ""))
     val tokenizer = mock[TwocheckoutTokenizer]
-    tokenizer.tokenize(sellerId, publishableKey, someCreditCard) returns Success(token)
+    tokenizer.tokenize(sellerId, publishableKey, someCreditCard, false) returns Success(token)
     val requestBuilder = mock[TwocheckoutRequestBuilder]
-    val gateway = new TwocheckoutGateway("", tokenizer, requestBuilder)
+    val gateway = new TwocheckoutGateway(settings, tokenizer, requestBuilder)
 
     def authorize() = gateway.authorize(someMerchantStr, someCreditCard, somePayment, Some(someCustomer), Some(someDeal))
 

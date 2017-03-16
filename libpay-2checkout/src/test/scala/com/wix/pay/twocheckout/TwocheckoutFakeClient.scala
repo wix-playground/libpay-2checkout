@@ -3,7 +3,7 @@ package com.wix.pay.twocheckout
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.http.{ByteArrayContent, GenericUrl, HttpRequestFactory}
 import com.wix.pay.creditcard.{CreditCard, CreditCardOptionalFields, YearMonth}
-import com.wix.pay.twocheckout.model.Environments
+import com.wix.pay.twocheckout.model.{Environments, TwocheckoutEnvironment, TwocheckoutSettings}
 import com.wix.pay.twocheckout.tokenization.html.HtmlTokenizer
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
@@ -18,14 +18,19 @@ object TwocheckoutFakeClient extends App {
   val sellerId = "yourSellerId"
   val publishableKey = "yourPublishableKey"
   val privateKey = "yourPrivateKey"
+  val sandboxMode = true
 
   val creditCard = CreditCard("4000000000000002", YearMonth(2020, 12), Some(CreditCardOptionalFields.withFields(
     csc = Some("123"), holderName = Some("John Smith"))
     ))
 
-  val tokenizer = new HtmlTokenizer(environment = Environments.sandbox)
+  val settings = TwocheckoutSettings(
+    production = TwocheckoutEnvironment("https://www.2checkout.com", "https://www.2checkout.com/checkout/api/2co.min.js"),
+    sandbox = TwocheckoutEnvironment("https://sandbox.2checkout.com", "https://sandbox.2checkout.com/checkout/api/2co.min.js")
+  )
+  val tokenizer = new HtmlTokenizer(settings)
 
-  val token = tokenizer.tokenize(sellerId, publishableKey, creditCard).get
+  val token = tokenizer.tokenize(sellerId, publishableKey, creditCard, sandboxMode).get
   println("token = " + token)
 
   val requestFactory: HttpRequestFactory = new NetHttpTransport().createRequestFactory()

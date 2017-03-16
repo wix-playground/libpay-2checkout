@@ -4,7 +4,7 @@ import java.net.URLEncoder
 
 import com.gargoylesoftware.htmlunit.{AlertHandler, Page, WebClient}
 import com.wix.pay.creditcard.CreditCard
-import com.wix.pay.twocheckout.model.Environments
+import com.wix.pay.twocheckout.model.TwocheckoutSettings
 import com.wix.pay.twocheckout.model.html.{Error, TokenizeResponse}
 import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
 import org.json4s.DefaultFormats
@@ -12,16 +12,11 @@ import org.json4s.native.Serialization
 
 import scala.util.Try
 
-object JavascriptSdkUrls {
-  val production = "https://www.2checkout.com/checkout/api/2co.min.js"
-}
-
 /**
   * [[TwocheckoutTokenizer]] that uses 2checkout's official JavaScript SDK inside a headless browser.
   */
-class HtmlTokenizer(jsSdkUrl: String = JavascriptSdkUrls.production,
-                    environment: String = Environments.production) extends TwocheckoutTokenizer {
-  override def tokenize(sellerId: String, publishableKey: String, card: CreditCard): Try[String] = {
+class HtmlTokenizer(settings: TwocheckoutSettings) extends TwocheckoutTokenizer {
+  override def tokenize(sellerId: String, publishableKey: String, card: CreditCard, sandboxMode: Boolean): Try[String] = {
     Try {
       val webClient = new WebClient
       webClient.getOptions.setCssEnabled(false)
@@ -36,8 +31,8 @@ class HtmlTokenizer(jsSdkUrl: String = JavascriptSdkUrls.production,
         })
 
         val tokenizeHtml = HtmlTokenizer.createTokenizeHtml(
-          jsSdkUrl = jsSdkUrl,
-          environment = environment,
+          jsSdkUrl = settings.jsSdkUrl(sandboxMode),
+          environment = settings.environment(sandboxMode),
           sellerId = sellerId,
           publishableKey = publishableKey,
           card = card

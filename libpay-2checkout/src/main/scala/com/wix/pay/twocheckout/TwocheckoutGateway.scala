@@ -4,6 +4,7 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.http.{ByteArrayContent, GenericUrl, HttpRequestFactory, HttpResponseException}
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model._
+import com.wix.pay.twocheckout.model.TwocheckoutSettings
 import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
 import com.wix.pay.{PaymentErrorException, PaymentGateway, PaymentRejectedException}
 import org.json4s._
@@ -11,7 +12,7 @@ import org.json4s.native.JsonMethods._
 
 import scala.util.Try
 
-class TwocheckoutGateway(endpointUrl: String = "https://www.2checkout.com",
+class TwocheckoutGateway(settings: TwocheckoutSettings,
                          tokenizer: TwocheckoutTokenizer,
                          requestBuilder: TwocheckoutRequestBuilder = new TwocheckoutRequestBuilder(),
                          merchantParser: TwocheckoutMerchantParser = JsonTwocheckoutMerchantParser) extends PaymentGateway {
@@ -35,10 +36,11 @@ class TwocheckoutGateway(endpointUrl: String = "https://www.2checkout.com",
       validateParams(payment, creditCard)
 
       val merchant = merchantParser.parse(merchantKey)
-      val token = tokenizer.tokenize(merchant.sellerId, merchant.publishableKey, creditCard).get
+      val token = tokenizer.tokenize(merchant.sellerId, merchant.publishableKey, creditCard, merchant.sandboxMode).get
 
       val requestContent = requestBuilder.saleRequestContent(merchant, token, creditCard, payment.currencyAmount, customer, deal)
 
+      val endpointUrl = settings.endpointUrl(merchant.sandboxMode)
       val response = requestFactory.buildPostRequest(
         new GenericUrl(s"$endpointUrl/checkout/api/1/${merchant.sellerId}/rs/authService"),
         new ByteArrayContent("application/json", compact(render(requestContent)).getBytes("UTF-8"))
