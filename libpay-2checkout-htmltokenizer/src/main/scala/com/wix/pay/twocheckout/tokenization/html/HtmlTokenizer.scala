@@ -1,22 +1,24 @@
 package com.wix.pay.twocheckout.tokenization.html
 
-import java.net.URLEncoder
 
+import scala.util.Try
+import java.net.URLEncoder
+import org.json4s.{DefaultFormats, Formats}
+import org.json4s.native.Serialization
 import com.gargoylesoftware.htmlunit.{AlertHandler, Page, WebClient}
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.twocheckout.model.TwocheckoutSettings
 import com.wix.pay.twocheckout.model.html.{Error, TokenizeResponse}
 import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
-import org.json4s.DefaultFormats
-import org.json4s.native.Serialization
 
-import scala.util.Try
 
-/**
-  * [[TwocheckoutTokenizer]] that uses 2checkout's official JavaScript SDK inside a headless browser.
+/** `TwocheckoutTokenizer` that uses 2checkout's official JavaScript SDK inside a headless browser.
   */
 class HtmlTokenizer(settings: TwocheckoutSettings) extends TwocheckoutTokenizer {
-  override def tokenize(sellerId: String, publishableKey: String, card: CreditCard, sandboxMode: Boolean): Try[String] = {
+  override def tokenize(sellerId: String,
+                        publishableKey: String,
+                        card: CreditCard,
+                        sandboxMode: Boolean): Try[String] = {
     Try {
       val webClient = new WebClient
       webClient.getOptions.setCssEnabled(false)
@@ -35,21 +37,23 @@ class HtmlTokenizer(settings: TwocheckoutSettings) extends TwocheckoutTokenizer 
           environment = settings.environment(sandboxMode),
           sellerId = sellerId,
           publishableKey = publishableKey,
-          card = card
-        )
+          card = card)
 
         webClient.getPage(s"data:text/html,${URLEncoder.encode(tokenizeHtml, "UTF-8")}")
 
         val responseJson = alertMessage.get
         val response = HtmlTokenizer.parseHtmlTokenizerResponseJson(responseJson)
+
         (response.error, response.value) match {
           case (Some(error), _) =>
             throw new RuntimeException(s"${error.errorCode}|${error.errorMsg}")
+
           case (None, Some(value)) =>
             value.response.token.token
-          case _ => throw new IllegalStateException(s"Tokenize HTML returned unexpected response format: $responseJson")
-        }
 
+          case _ =>
+            throw new IllegalStateException(s"Tokenize HTML returned unexpected response format: $responseJson")
+        }
       } finally {
         webClient.close()
       }
@@ -58,7 +62,7 @@ class HtmlTokenizer(settings: TwocheckoutSettings) extends TwocheckoutTokenizer 
 }
 
 private object HtmlTokenizer {
-  private implicit val formats = DefaultFormats
+  private implicit val formats: Formats = DefaultFormats
 
   /**
     * @param value   Success value (None on error).
@@ -76,7 +80,11 @@ private object HtmlTokenizer {
     * Communication with 2checkout is done using their official JavaScript SDK. The response, a JSON serialized
     * [[HtmlTokenizerResponse]], is output using window.alert.
     */
-  def createTokenizeHtml(jsSdkUrl: String, environment: String, sellerId: String, publishableKey: String, card: CreditCard): String = {
+  def createTokenizeHtml(jsSdkUrl: String,
+                         environment: String,
+                         sellerId: String,
+                         publishableKey: String,
+                         card: CreditCard): String = {
     s"""
        |<!DOCTYPE html>
        |<html>

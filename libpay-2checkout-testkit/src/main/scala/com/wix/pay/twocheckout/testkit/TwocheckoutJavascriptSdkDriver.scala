@@ -1,21 +1,24 @@
 package com.wix.pay.twocheckout.testkit
 
-import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe
+
+import org.json4s.{DefaultFormats, Formats}
+import org.json4s.native.Serialization
+import akka.http.scaladsl.model.Uri.Path
+import akka.http.scaladsl.model._
+import com.wix.e2e.http.api.StubWebServer
+import com.wix.e2e.http.server.WebServerFactory.aStubWebServer
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.twocheckout.model.html.{Error, PaymentMethod, Token, TokenResponse, TokenizeResponse}
-import org.json4s.DefaultFormats
-import org.json4s.native.Serialization
-import spray.http._
+
 
 class TwocheckoutJavascriptSdkDriver(port: Int) {
-  private implicit val format = DefaultFormats
-  private val probe = new EmbeddedHttpProbe(port, EmbeddedHttpProbe.NotFoundHandler)
+  private implicit val format: Formats = DefaultFormats
+  private val server: StubWebServer = aStubWebServer.onPort(port).build
 
-  def reset(): Unit = probe.reset()
+  def start(): Unit = server.start()
+  def stop(): Unit = server.stop()
+  def reset(): Unit = server.replaceWith()
 
-  def start(): Unit = probe.doStart()
-
-  def stop(): Unit = probe.doStop()
 
   def aJavascriptSdkRequest(sellerId: String,
                             publishableKey: String,
@@ -23,6 +26,7 @@ class TwocheckoutJavascriptSdkDriver(port: Int) {
                             creditCard: CreditCard): JavascriptSdkRequest = {
     JavascriptSdkRequest(sellerId, publishableKey, environment, creditCard)
   }
+
 
   case class JavascriptSdkRequest(sellerId: String,
                                   publishableKey: String,
@@ -34,16 +38,13 @@ class TwocheckoutJavascriptSdkDriver(port: Int) {
           `type` = "TokenResponse",
           token = Token(
             dateCreated = System.currentTimeMillis,
-            token = token
-          ),
+            token = token),
           paymentMethod = PaymentMethod(
             cardNum = s"XXXX-XXXX-XXXX-${creditCard.number.takeRight(4)}",
             expMonth = creditCard.expiration.month.toString,
             expYear = creditCard.expiration.year.toString,
-            cardType = "VS"
-          )
-        )
-      ))
+            cardType = "VS"))))
+
       respondWith(javascript)
     }
 
@@ -53,23 +54,20 @@ class TwocheckoutJavascriptSdkDriver(port: Int) {
     }
 
     private def respondWith(javascript: String): Unit = {
-      probe.handlers.clear()
-      probe.handlers += {
-        case HttpRequest(HttpMethods.GET, Uri.Path("/"), _, _, _) =>
-          HttpResponse(StatusCodes.OK, HttpEntity(ContentType(MediaTypes.`application/javascript`), javascript))
+      server.appendAll {
+        case HttpRequest(HttpMethods.GET, Path("/"), _, _, _) =>
+          HttpResponse(
+            status = StatusCodes.OK,
+            entity = HttpEntity(ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), javascript))
       }
     }
 
     private def buildSucceedingJavascriptSdk(response: TokenizeResponse): String = {
-      buildJavascriptSdk(
-        requestTokenJs = s"onSuccess(${Serialization.write(response)});"
-      )
+      buildJavascriptSdk(requestTokenJs = s"onSuccess(${Serialization.write(response)});")
     }
 
     private def buildFailingJavascriptSdk(error: Error): String = {
-      buildJavascriptSdk(
-        requestTokenJs = s"onError(${Serialization.write(error)});"
-      )
+      buildJavascriptSdk(requestTokenJs = s"onError(${Serialization.write(error)});")
     }
 
     private def buildJavascriptSdk(requestTokenJs: String): String = {
