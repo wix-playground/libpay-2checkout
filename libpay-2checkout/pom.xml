@@ -89,8 +89,8 @@
         </dependency>
         <dependency>
             <groupId>org.specs2</groupId>
-            <artifactId>specs2-mock_2.11</artifactId>
-            <version>3.7</version>
+            <artifactId>specs2-mock_${scala.dependencies.version}</artifactId>
+            <version>3.8.6</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
