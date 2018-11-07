@@ -1,9 +1,6 @@
 package com.wix.pay.twocheckout.testkit
 
 
-import org.apache.commons.codec.binary.Base64
-import org.json4s.{DefaultFormats, Formats}
-import org.json4s.native.Serialization
 import akka.http.scaladsl.model.Uri.Path
 import akka.http.scaladsl.model._
 import com.wix.e2e.http.api.StubWebServer
@@ -12,6 +9,9 @@ import com.wix.e2e.http.server.WebServerFactory.aStubWebServer
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.{CurrencyAmount, Customer, Deal, ShippingAddress}
 import com.wix.pay.twocheckout.tokenization.RSAPublicKey
+import org.apache.commons.codec.binary.Base64
+import org.json4s.native.Serialization
+import org.json4s.{DefaultFormats, Formats}
 
 
 class TwocheckoutDriver(port: Int) {
@@ -19,7 +19,9 @@ class TwocheckoutDriver(port: Int) {
   private val server: StubWebServer = aStubWebServer.onPort(port).build
 
   def start(): Unit = server.start()
+
   def stop(): Unit = server.stop()
+
   def reset(): Unit = server.replaceWith()
 
 
@@ -54,17 +56,19 @@ class TwocheckoutDriver(port: Int) {
       respondWith(StatusCodes.OK, toJson(response))
     }
 
-    def getsRejectedWith(message: String): Unit = respondWith(StatusCodes.BadRequest, toJson(rejected(message)))
-    def getsAnErrorWith(message: String): Unit = {
-      respondWith(StatusCodes.InternalServerError, toJson(internalError(message)))
-    }
+    def getsRejectedWith(message: String, transactionId: Option[Any] = None): Unit =
+      respondWith(StatusCodes.BadRequest, toJson(rejected(message, transactionId)))
 
-    private def rejected(message: String) = errorResponse(message, httpStatus = 400, errorCode = 607)
-    private def internalError(message: String) = errorResponse(message, httpStatus = 500, errorCode = 400)
+    def getsAnErrorWith(message: String, transactionId: Option[String] = None): Unit =
+      respondWith(StatusCodes.InternalServerError, toJson(internalError(message, transactionId)))
 
-    private def errorResponse(errorDescription: String, httpStatus: Int, errorCode: Int) = Map(
+    private def rejected(message: String, transactionId: Option[Any]) = errorResponse(message, httpStatus = 400, errorCode = 607, transactionId = transactionId)
+
+    private def internalError(message: String, transactionId: Option[String]) = errorResponse(message, httpStatus = 500, errorCode = 400, transactionId = transactionId)
+
+    private def errorResponse(errorDescription: String, httpStatus: Int, errorCode: Int, transactionId: Option[Any]) = Map(
       "validationErrors" -> null,
-      "response" -> null,
+      "response" -> transactionId.map(value => Map("orderNumber" -> value)).orNull,
       "exception" -> Map(
         "errorMsg" -> errorDescription,
         "httpStatus" -> httpStatus.toString,
@@ -131,6 +135,7 @@ class TwocheckoutDriver(port: Int) {
     }
 
     private def toJson(map: Map[_, Any]): String = Serialization.write(map)
+
     private def toMap(entity: HttpEntity): Map[String, Any] = {
       Serialization.read[Map[String, Any]](entity.extractAsString)
     }
@@ -219,7 +224,7 @@ class TwocheckoutDriver(port: Int) {
       server.appendAll {
         case HttpRequest(HttpMethods.GET, requestPath, _, _, _)
           if requestPath.path startsWith Path(s"/checkout/api/script/publickey/") =>
-            HttpResponse(status = status, entity = content)
+          HttpResponse(status = status, entity = content)
       }
     }
   }
@@ -310,4 +315,5 @@ class TwocheckoutDriver(port: Int) {
       }
     }
   }
+
 }

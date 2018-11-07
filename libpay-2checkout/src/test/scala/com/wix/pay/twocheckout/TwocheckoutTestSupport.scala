@@ -28,6 +28,7 @@ trait TwocheckoutTestSupport extends LibPayTestSupport {
   )
 
   def beRejectedWithMessage(message: String): Matcher[Try[String]] = beFailedTry.like { case e: PaymentRejectedException => e.message mustEqual message }
+  def beRejectedWithTransactionId(transactionId: Option[String]): Matcher[Try[String]] = beFailedTry.like { case e: PaymentRejectedException => e.transactionId mustEqual transactionId }
   def failWithMessage(message: String): Matcher[Try[String]] = beFailedTry.like { case e: PaymentErrorException => e.message must contain(message) }
 
   def beParseError: Matcher[Try[String]] = failWithCause[ParseException]

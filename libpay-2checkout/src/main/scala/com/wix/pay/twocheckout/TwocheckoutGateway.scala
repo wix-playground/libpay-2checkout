@@ -7,8 +7,8 @@ import com.wix.pay.model._
 import com.wix.pay.twocheckout.model.TwocheckoutSettings
 import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
 import com.wix.pay.{PaymentErrorException, PaymentGateway, PaymentRejectedException}
-import org.json4s._
 import org.json4s.native.JsonMethods._
+import org.json4s.{JValue, _}
 
 import scala.util.Try
 
@@ -16,6 +16,8 @@ class TwocheckoutGateway(settings: TwocheckoutSettings,
                          tokenizer: TwocheckoutTokenizer,
                          requestBuilder: TwocheckoutRequestBuilder = new TwocheckoutRequestBuilder(),
                          merchantParser: TwocheckoutMerchantParser = JsonTwocheckoutMerchantParser) extends PaymentGateway {
+
+  private implicit val formats: Formats = DefaultFormats
 
   private val requestFactory: HttpRequestFactory = new NetHttpTransport().createRequestFactory()
 
@@ -80,12 +82,15 @@ class TwocheckoutGateway(settings: TwocheckoutSettings,
   private def handleHttpException(e: HttpResponseException): Nothing = {
     val errorContent = parse(e.getContent)
     val JString(errorCode) = errorContent \ "exception" \ "errorCode"
+
+    val orderNumber: Option[String] = (errorContent \ "response" \ "orderNumber").extractOpt[String]
+
     if (e.getStatusCode == 400 && errorCode.toInt >= 600) {
       // Errors with 2Checkout's custom error code above 600 -> credit card rejected
       val JString(errorMessage) = errorContent \ "exception" \ "errorMsg"
-      throw PaymentRejectedException(errorMessage, e)
+      throw PaymentRejectedException(errorMessage, e, transactionId = orderNumber)
     } else {
-      throw PaymentErrorException(e.getMessage, e)
+      throw PaymentErrorException(e.getMessage, e, transactionId =  orderNumber)
     }
   }
 }
