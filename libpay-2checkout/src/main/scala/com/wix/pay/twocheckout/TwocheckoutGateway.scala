@@ -7,8 +7,8 @@ import com.wix.pay.model._
 import com.wix.pay.twocheckout.model.TwocheckoutSettings
 import com.wix.pay.twocheckout.tokenization.TwocheckoutTokenizer
 import com.wix.pay.{PaymentErrorException, PaymentGateway, PaymentRejectedException}
+import org.json4s._
 import org.json4s.native.JsonMethods._
-import org.json4s.{JValue, _}
 
 import scala.util.Try
 
@@ -90,7 +90,7 @@ class TwocheckoutGateway(settings: TwocheckoutSettings,
       val JString(errorMessage) = errorContent \ "exception" \ "errorMsg"
       throw PaymentRejectedException(errorMessage, e, transactionId = orderNumber)
     } else {
-      throw PaymentErrorException(e.getMessage, e, transactionId =  orderNumber)
+      throw PaymentErrorException(e.getMessage, e, transactionId = orderNumber)
     }
   }
 }
