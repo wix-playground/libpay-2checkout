@@ -1,6 +1,8 @@
 package com.wix.pay.twocheckout
 
 
+import com.wix.pay.PaymentRejectedException
+
 import scala.util.Try
 import org.specs2.mutable.SpecWithJUnit
 import org.specs2.specification.Scope
@@ -63,7 +65,7 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
 
   "sale request" should {
     "successfully yield an orderNumber upon a valid request" in new Ctx {
-      givenTokenRequestReturnsToken
+      givenTokenRequestReturnsToken()
       givenWorldpaySaleRequest returns someOrderNumber
 
       sale() must beSuccessfulTry.withValue(someOrderNumber)
@@ -76,14 +78,37 @@ class TwocheckoutGatewayIT extends SpecWithJUnit with TwocheckoutTestSupport {
     }
 
     "fail with PaymentRejectedException for rejected transactions" in new Ctx {
-      givenTokenRequestReturnsToken
+      givenTokenRequestReturnsToken()
       givenWorldpaySaleRequest getsRejectedWith "Some error message"
 
       sale() must beRejectedWithMessage("Some error message")
     }
 
+
+    "fail with PaymentRejectedException with transactionId of type string for rejected transactions" in new Ctx {
+      givenTokenRequestReturnsToken()
+      val someTransactionId = "someTransactionId"
+      givenWorldpaySaleRequest getsRejectedWith("Some error message", Some(someTransactionId))
+
+      sale() must {
+        beRejectedWithMessage("Some error message") and
+        beRejectedWithTransactionId(Some(someTransactionId))
+      }
+    }
+
+    "fail with PaymentRejectedException with transactionId of type Integer for rejected transactions" in new Ctx {
+      givenTokenRequestReturnsToken()
+      val someTransactionId = 123455
+      givenWorldpaySaleRequest getsRejectedWith("Some error message", Some(someTransactionId))
+
+      sale() must {
+        beRejectedWithMessage("Some error message") and
+          beRejectedWithTransactionId(Some(someTransactionId.toString))
+      }
+    }
+
     "fail with PaymentErrorException for erroneous response" in new Ctx {
-      givenTokenRequestReturnsToken
+      givenTokenRequestReturnsToken()
       givenWorldpaySaleRequest getsAnErrorWith "Something bad happened"
 
       sale() must failWithMessage("Something bad happened")
